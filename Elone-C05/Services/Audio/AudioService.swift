@@ -12,7 +12,7 @@ final class AudioService {
 
     func loadAudio() throws -> [Float] {
         guard let url = Bundle.main.url(
-            forResource: "Audio-001",
+            forResource: "Audio-002",
             withExtension: "wav"
         ) else {
             throw NSError(domain: "Audio", code: 1)
