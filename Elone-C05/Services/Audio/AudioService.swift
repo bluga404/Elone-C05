@@ -9,6 +9,8 @@ import Foundation
 import AVFoundation
 
 final class AudioService {
+    
+    private var audioRecorder: AVAudioRecorder?
 
     func loadAudio() throws -> [Float] {
         guard let url = Bundle.main.url(

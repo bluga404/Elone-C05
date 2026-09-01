@@ -14,7 +14,7 @@ final class WhisperService {
     
     init() {
         guard let modelURL = Bundle.main.url(
-            forResource: "ggml-base",
+            forResource: "ggml-large-v3-turbo-q5_0",
             withExtension: "bin"
         ) else {
             print("Whisper model not found")
@@ -31,7 +31,7 @@ final class WhisperService {
         
         print(
             "Whisper context:",
-            context == nil ? "FAILED" : "SUCCESS"
+            context == nil ? "FAILED" : "SUCCESS"               
         )
     }
     
@@ -48,7 +48,6 @@ final class WhisperService {
         params.translate = false
         params.print_progress = false
         params.print_realtime = false
-
         let result = audio.withUnsafeBufferPointer { samples in
             whisper_full(
                 context,

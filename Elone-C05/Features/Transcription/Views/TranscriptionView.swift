@@ -1,10 +1,3 @@
-//
-//  TranscriptionView.swift
-//  Elone-C05
-//
-//  Created by Walker Valentinus Simanjuntak on 31/08/26.
-//
-
 import SwiftUI
 
 struct TranscriptionView: View {
@@ -18,16 +11,32 @@ struct TranscriptionView: View {
                 .bold()
 
             Button {
-                viewModel.transcribeAudio()
+                viewModel.toggleRecording()
             } label: {
-                if viewModel.isTranscribing {
-                    ProgressView()
-                } else {
-                    Text("Transcribe Audio")
+                Image(systemName: viewModel.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(viewModel.isRecording ? .red : .blue)
+            }
+            .disabled(viewModel.isTranscribing)
+            
+            if viewModel.isRecording {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(1.0)
+                        .animation(.easeInOut(duration: 0.5).repeatForever(), value: viewModel.isRecording)
+                    
+                    Text(viewModel.recordingDuration)
+                        .font(.title2)
+                        .fontDesign(.monospaced)
+                        .foregroundColor(.red)
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.isTranscribing)
+            
+            if viewModel.isTranscribing {
+                ProgressView("Transcribing...")
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Transcript")
@@ -45,6 +54,13 @@ struct TranscriptionView: View {
                     )
                 }
                 .frame(maxHeight: 300)
+            }
+            
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
             }
         }
         .padding()
