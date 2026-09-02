@@ -12,10 +12,16 @@ import AVFoundation
 @Observable
 final class HomeViewModel {
     
+    // Transcription Services
+    private let whisperService = WhisperService()
+    private let bufferConverter = BufferConverter()
+    
     // Audio manager
     private let audioManager = AudioManager()
+    
     // Recording List
     var recordings: [Recording] = []
+    
     // Recording state
     var isRecording = false
     
@@ -41,6 +47,9 @@ final class HomeViewModel {
     }
     
     func toggleRecording() {
+        print("=== TOGGLE RECORDING ===")
+        print("isRecording:", isRecording)
+
         if isRecording {
             stopRecording()
         } else {
@@ -59,30 +68,74 @@ final class HomeViewModel {
     }
 
     func stopRecording() {
-        let _ = audioManager.stopRecording()
+        print("=== STOP RECORDING ===")
+
+        guard let url = audioManager.stopRecording() else {
+            print("Failed to stop recording")
+            isRecording = false
+            return
+        }
+
+        print("Stopped:", url.lastPathComponent)
+
         isRecording = false
+
         Task {
+            print("=== LOAD RECORDINGS AFTER STOP ===")
+
             await loadRecordings()
+
+            print("=== FINDING RECORDING ===")
+
+            guard let recording = recordings.first(where: {
+                $0.audioURL.lastPathComponent == url.lastPathComponent
+            }) else {
+                print("Recording not found")
+                return
+            }
+
+            print("Found:", recording.audioURL.lastPathComponent)
+
+            transcribe(recording: recording)
         }
     }
     
     func loadRecordings() async {
         let urls = (try? audioManager.fetchRecordings()) ?? []
         var newRecordings: [Recording] = []
+
         for url in urls {
             let duration = await recordingDuration(url)
-            let recording = Recording(
-                id: UUID(),
-                audioURL: url,
-                createdAt: recordingDateValue(url),
-                duration: duration,
-                transcript: nil
-            )
-            newRecordings.append(recording)
+
+            if let existingRecording = recordings.first(where: {
+                $0.audioURL.lastPathComponent == url.lastPathComponent
+            }) {
+                newRecordings.append(
+                    Recording(
+                        id: existingRecording.id,
+                        audioURL: url,
+                        createdAt: existingRecording.createdAt,
+                        duration: duration,
+                        transcript: existingRecording.transcript
+                    )
+                )
+            } else {
+                newRecordings.append(
+                    Recording(
+                        id: UUID(),
+                        audioURL: url,
+                        createdAt: recordingDateValue(url),
+                        duration: duration,
+                        transcript: nil
+                    )
+                )
+            }
         }
+
         recordings = newRecordings
 
         print("=== RECORDINGS ===")
+
         for recording in recordings {
             print("ID:", recording.id)
             print("Audio:", recording.audioURL.lastPathComponent)
@@ -113,6 +166,31 @@ final class HomeViewModel {
             date: .abbreviated,
             time: .shortened
         )
+    }
+    
+    func transcribe(recording: Recording) {
+        print("=== TRANSCRIBING ===")
+        print("Audio:", recording.audioURL.lastPathComponent)
+
+        do {
+            let audio = try bufferConverter.convertFile(at: recording.audioURL)
+
+            print("Audio converted successfully")
+
+            let transcript = whisperService.transcribe(audio: audio)
+
+            print("Transcript result:", transcript)
+
+            if let index = recordings.firstIndex(where: { $0.id == recording.id }) {
+                recordings[index].transcript = transcript
+
+                print("Transcript saved to recording")
+            } else {
+                print("Recording not found in recordings array")
+            }
+        } catch {
+            print("Failed to transcribe:", error)
+        }
     }
 }
 
