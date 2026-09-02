@@ -9,6 +9,9 @@ import SwiftUI
 
 struct HomeView: View {
     
+    // Home View Model
+    @State private var viewModel = HomeViewModel()
+    
     var body: some View {
         HStack {
             BackButton()
@@ -31,8 +34,41 @@ struct HomeView: View {
         }
         .padding()
         
+        List {
+            ForEach(viewModel.recordings, id: \.self) { recording in
+
+                HStack {
+                    Button {
+                        viewModel.playRecording(url: recording)
+                    } label: {
+                        Image(systemName: "play.fill")
+                    }
+
+                    VStack(alignment: .leading) {
+                        Text(recording.deletingPathExtension().lastPathComponent)
+                            .font(.headline)
+
+                        Text(viewModel.recordingDate(recording))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+                }
+            }
+        }
+        .task {
+            viewModel.loadRecordings()
+        }
+        
         Spacer()
         
+        RecordButton(
+            isRecording: viewModel.isRecording
+        ) {
+            viewModel.toggleRecording()
+        }
+        .padding(.bottom, 20)
     }
     
 }
