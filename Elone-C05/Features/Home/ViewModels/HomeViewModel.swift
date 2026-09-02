@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AVFoundation
 
 @MainActor
 @Observable
@@ -13,11 +14,31 @@ final class HomeViewModel {
     
     // Audio manager
     private let audioManager = AudioManager()
-    
     // Recording List
-    var recordings: [URL] = []
-    
+    var recordings: [Recording] = []
+    // Recording state
     var isRecording = false
+    
+    // Data helper function
+    private func recordingDateValue(_ url: URL) -> Date {
+        let attributes = try? FileManager.default.attributesOfItem(
+            atPath: url.path
+        )
+
+        return attributes?[.creationDate] as? Date ?? Date()
+    }
+    
+    // Duration helper function (async)
+    private func recordingDuration(_ url: URL) async -> TimeInterval {
+        let asset = AVURLAsset(url: url)
+        do {
+            let duration = try await asset.load(.duration)
+            return CMTimeGetSeconds(duration)
+        } catch {
+            print("Failed to load duration: \(error)")
+            return 0
+        }
+    }
     
     func toggleRecording() {
         if isRecording {
@@ -40,15 +61,41 @@ final class HomeViewModel {
     func stopRecording() {
         let _ = audioManager.stopRecording()
         isRecording = false
-        loadRecordings()
+        Task {
+            await loadRecordings()
+        }
     }
     
-    func loadRecordings() {
-        recordings = (try? audioManager.fetchRecordings()) ?? []
+    func loadRecordings() async {
+        let urls = (try? audioManager.fetchRecordings()) ?? []
+        var newRecordings: [Recording] = []
+        for url in urls {
+            let duration = await recordingDuration(url)
+            let recording = Recording(
+                id: UUID(),
+                audioURL: url,
+                createdAt: recordingDateValue(url),
+                duration: duration,
+                transcript: nil
+            )
+            newRecordings.append(recording)
+        }
+        recordings = newRecordings
+
+        print("=== RECORDINGS ===")
+        for recording in recordings {
+            print("ID:", recording.id)
+            print("Audio:", recording.audioURL.lastPathComponent)
+            print("Created:", recording.createdAt)
+            print("Duration:", recording.duration)
+            print("Transcript:", recording.transcript ?? "nil")
+            print("------------------")
+        }
     }
     
-    func playRecording(url: URL) {
-        try? audioManager.play(url: url)
+    func playRecording(recording: Recording) {
+        print("Playing:", recording.audioURL.lastPathComponent)
+        try? audioManager.play(url: recording.audioURL)
     }
     
     func recordingDate(_ url: URL) -> String {
@@ -68,3 +115,4 @@ final class HomeViewModel {
         )
     }
 }
+

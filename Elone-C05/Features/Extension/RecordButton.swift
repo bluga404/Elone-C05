@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct RecordButton: View {
 
     let isRecording: Bool

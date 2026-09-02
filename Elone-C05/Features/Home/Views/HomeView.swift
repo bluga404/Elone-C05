@@ -35,22 +35,28 @@ struct HomeView: View {
         .padding()
         
         List {
-            ForEach(viewModel.recordings, id: \.self) { recording in
-
+            ForEach(viewModel.recordings) { recording in
                 HStack {
                     Button {
-                        viewModel.playRecording(url: recording)
+                        viewModel.playRecording(recording: recording)
                     } label: {
                         Image(systemName: "play.fill")
                     }
 
                     VStack(alignment: .leading) {
-                        Text(recording.deletingPathExtension().lastPathComponent)
-                            .font(.headline)
+                        Text(
+                            recording
+                                .audioURL
+                                .deletingPathExtension()
+                                .lastPathComponent
+                        )
+                        .font(.headline)
 
-                        Text(viewModel.recordingDate(recording))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            viewModel.recordingDate(recording.audioURL)
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -58,7 +64,7 @@ struct HomeView: View {
             }
         }
         .task {
-            viewModel.loadRecordings()
+            await viewModel.loadRecordings()
         }
         
         Spacer()
